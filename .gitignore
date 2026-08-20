@@ -1,0 +1,21 @@
+# Python
+__pycache__/
+*.pyc
+.venv/
+venv/
+env/
+
+# Biometric / personal data — do not commit real enrollment data or attendance logs
+data/faces_data.pkl
+data/names.pkl
+data/ids.pkl
+data/model.pkl
+Attendance/Attendance_*.csv
+
+# Streamlit
+.streamlit/secrets.toml
+
+# OS / editor
+.DS_Store
+.vscode/
+.idea/

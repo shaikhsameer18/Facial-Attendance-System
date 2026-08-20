@@ -1,6 +1,7 @@
-opencv-python
-opencv-python-headless
-numpy
-pandas
-scikit-learn
-streamlit
+streamlit==1.38.0
+streamlit-webrtc==0.47.9
+av==12.3.0
+opencv-python-headless==4.10.0.84
+numpy==1.26.4
+pandas==2.2.2
+scikit-learn==1.5.1

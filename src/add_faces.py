@@ -1,83 +1,47 @@
+"""Optional offline enrollment via local webcam window (no browser needed).
+
+Requires the non-headless `opencv-python` package for cv2.imshow to work.
+For normal use, prefer the "Register New Face" page in app.py instead —
+it works the same way locally and remotely.
+"""
 import cv2
-import pickle
-import numpy as np
-import os
 
-# Initialize video capture and face detector
+import face_utils as fu
+
 video = cv2.VideoCapture(0)
-facedetect = cv2.CascadeClassifier("data/haarcascade_frontalface_default.xml")
+if not video.isOpened():
+    raise RuntimeError("Could not open webcam. Is another app using it?")
 
-faces_data = []
+name = input("Enter Your Name: ").strip()
+user_id = input("Enter Your ID: ").strip()
+
+samples = []
 i = 0
+try:
+    while len(samples) < fu.SAMPLES_PER_USER:
+        ret, frame = video.read()
+        if not ret:
+            break
 
-# Get user input for name and ID
-name = input("Enter Your Name: ")
-user_id = input("Enter Your ID: ")
+        for (x, y, w, h) in fu.detect_faces(frame):
+            crop = cv2.resize(frame[y : y + h, x : x + w], fu.FACE_SIZE)
+            if i % 10 == 0:
+                samples.append(crop)
+            i += 1
+            cv2.rectangle(frame, (x, y), (x + w, y + h), (50, 50, 255), 2)
+            cv2.putText(frame, f"{len(samples)}/{fu.SAMPLES_PER_USER}", (50, 50),
+                        cv2.FONT_HERSHEY_COMPLEX, 1, (50, 50, 255), 2)
 
-# Capture images
-while True:
-    ret, frame = video.read()
-    gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
-    faces = facedetect.detectMultiScale(gray, 1.3, 5)
+        cv2.imshow("Register Face - press q to cancel", frame)
+        if cv2.waitKey(1) & 0xFF == ord("q"):
+            break
+finally:
+    video.release()
+    cv2.destroyAllWindows()
 
-    for x, y, w, h in faces:
-        crop_img = frame[y : y + h, x : x + w, :]
-        resized_img = cv2.resize(crop_img, (50, 50))
-
-        if len(faces_data) < 50 and i % 10 == 0:
-            faces_data.append(resized_img)
-
-        i += 1
-        cv2.putText(
-            frame,
-            str(len(faces_data)),
-            (50, 50),
-            cv2.FONT_HERSHEY_COMPLEX,
-            1,
-            (50, 50, 255),
-            1,
-        )
-        cv2.rectangle(frame, (x, y), (x + w, y + h), (50, 50, 255), 1)
-
-    cv2.imshow("Frame", frame)
-    k = cv2.waitKey(1)
-
-    if k == ord("q") or len(faces_data) >= 50:
-        break
-
-video.release()
-cv2.destroyAllWindows()
-
-faces_data = np.asarray(faces_data)
-faces_data = faces_data.reshape(50, -1)
-
-# Save names and faces data
-if "names.pkl" not in os.listdir("data/"):
-    names = [name] * 50
-    ids = [user_id] * 50  # New: Store user IDs
-    with open("data/names.pkl", "wb") as f:
-        pickle.dump(names, f)
-    with open("data/ids.pkl", "wb") as f:  # New: Save IDs
-        pickle.dump(ids, f)
+if len(samples) < fu.SAMPLES_PER_USER:
+    print(f"Only captured {len(samples)} samples, aborting (need {fu.SAMPLES_PER_USER}).")
 else:
-    with open("data/names.pkl", "rb") as f:
-        names = pickle.load(f)
-    with open("data/ids.pkl", "rb") as f:  # Load existing IDs
-        ids = pickle.load(f)
-    names += [name] * 50
-    ids += [user_id] * 50
-    with open("data/names.pkl", "wb") as f:
-        pickle.dump(names, f)
-    with open("data/ids.pkl", "wb") as f:  # Save updated IDs
-        pickle.dump(ids, f)
-
-# Save face data
-if "faces_data.pkl" not in os.listdir("data/"):
-    with open("data/faces_data.pkl", "wb") as f:
-        pickle.dump(faces_data, f)
-else:
-    with open("data/faces_data.pkl", "rb") as f:
-        faces = pickle.load(f)
-    faces = np.append(faces, faces_data, axis=0)
-    with open("data/faces_data.pkl", "wb") as f:
-        pickle.dump(faces, f)
+    fu.save_face_samples(name, user_id, samples)
+    fu.train_and_save_model()
+    print(f"Registered {name} (ID {user_id}) and retrained model.pkl")
