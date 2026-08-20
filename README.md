@@ -50,12 +50,29 @@ Open the URL Streamlit prints, allow camera access when the browser asks, go to 
 
 ### Option A — Streamlit Community Cloud (recommended, free, always-on URL)
 
-1. Push this repo to GitHub (see note on biometric data below first).
-2. Go to [share.streamlit.io](https://share.streamlit.io), connect the repo, set main file to `app.py`.
-3. It auto-installs `requirements.txt` and the apt packages in `packages.txt` (needed for OpenCV on Linux). `runtime.txt` pins the Python version.
-4. Deploy. You get a permanent `https://<app>.streamlit.app` URL usable from any device, anywhere.
+1. **Push this repo to GitHub first** — see the data/privacy note below before making it public.
 
-No extra config needed — the app already uses browser-side camera capture (streamlit-webrtc), so this works out of the box unlike a plain `cv2.VideoCapture(0)` app.
+   ```bash
+   git push origin main
+   ```
+
+2. Go to [share.streamlit.io](https://share.streamlit.io) and sign in with GitHub.
+3. Click **"Create app"** → **"Deploy a public app from GitHub"** (or connect a private repo if you kept it private).
+4. Fill in the deploy form:
+   - **Repository**: `shaikhsameer18/Facial-Attendance-System`
+   - **Branch**: `main`
+   - **Main file path**: `app.py`
+   - App URL (optional): pick a custom subdomain, e.g. `facial-attendance` → `https://facial-attendance.streamlit.app`
+5. Click **"Advanced settings"** before deploying:
+   - Python version: `3.11` (matches `runtime.txt`)
+   - You don't need to add secrets/env vars for this app.
+6. Click **Deploy**. First build takes a few minutes — it installs `requirements.txt` and the apt packages listed in `packages.txt` (needed for OpenCV on Linux), and reads `runtime.txt` for the Python version.
+7. Once it's live, open the URL, allow camera access when your browser prompts, go to **Register New Face** and enroll yourself first — the deployed app starts with no trained model since the face/model pickle files are gitignored.
+8. Any later `git push` to `main` auto-redeploys the app (Streamlit Cloud watches the branch).
+
+No extra config needed beyond that — the app already uses browser-side camera capture (streamlit-webrtc), so this works out of the box unlike a plain `cv2.VideoCapture(0)` app, which would fail on a server with no webcam.
+
+**Note on data persistence**: Streamlit Community Cloud's filesystem is ephemeral — anyone you enroll and any attendance logged will be wiped on redeploy/restart. Fine for demos; for real ongoing use, see Option B/C with a mounted volume, or swap the pickle/CSV storage for a real database.
 
 ### Option B — Docker (Render, Railway, Fly.io, a home server, anywhere containers run)
 
